@@ -2,6 +2,7 @@ import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { BaseHandler } from './BaseHandler.js';
 import type { ToolDefinition } from '../types/tools.js';
 import { ADTClient } from "abap-adt-api";
+import { performance } from 'perf_hooks';
 
 export class ObjectLockHandlers extends BaseHandler {
   getTools(): ToolDefinition[] {

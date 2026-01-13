@@ -1,6 +1,8 @@
 import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { BaseHandler } from './BaseHandler';
 import type { ToolDefinition } from '../types/tools';
+import { performance } from 'perf_hooks';
+import { readFile } from 'fs/promises';
 
 export class ObjectSourceHandlers extends BaseHandler {
   getTools(): ToolDefinition[] {
@@ -19,16 +21,32 @@ export class ObjectSourceHandlers extends BaseHandler {
       },
       {
         name: 'setObjectSource',
-        description: 'Sets source code for ABAP objects',
+        description: 'Sets source code for ABAP objects. Use filePath for large files to avoid context overflow.',
         inputSchema: {
           type: 'object',
           properties: {
-            objectSourceUrl: { type: 'string' },
-            source: { type: 'string' },
-            lockHandle: { type: 'string' },
-            transport: { type: 'string' }
+            objectSourceUrl: {
+              type: 'string',
+              description: 'The object source URL (e.g., /sap/bc/adt/oo/classes/zcl_example/source/main)'
+            },
+            source: {
+              type: 'string',
+              description: 'Source code content (for small files - will be included in context)'
+            },
+            filePath: {
+              type: 'string',
+              description: 'Local file path to read source from (for large files - bypasses context)'
+            },
+            lockHandle: {
+              type: 'string',
+              description: 'Lock handle obtained from lock operation'
+            },
+            transport: {
+              type: 'string',
+              description: 'Transport request number (optional)'
+            }
           },
-          required: ['objectSourceUrl', 'source', 'lockHandle']
+          required: ['objectSourceUrl', 'lockHandle']
         }
       }
     ];
@@ -71,12 +89,46 @@ export class ObjectSourceHandlers extends BaseHandler {
     }
   }
 
-  async handleSetObjectSource(args: any): Promise<any> {    
+  async handleSetObjectSource(args: any): Promise<any> {
     const startTime = performance.now();
     try {
+      // Validate that either source or filePath is provided
+      if (!args.source && !args.filePath) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          'Either source or filePath must be provided'
+        );
+      }
+
+      // Validate that not both are provided
+      if (args.source && args.filePath) {
+        throw new McpError(
+          ErrorCode.InvalidParams,
+          'Cannot use both source and filePath. Use one or the other.'
+        );
+      }
+
+      let sourceContent: string;
+
+      if (args.filePath) {
+        // Read from file (for large files - bypasses context)
+        try {
+          sourceContent = await readFile(args.filePath, 'utf-8');
+          this.logger.info('Source loaded from file', { filePath: args.filePath });
+        } catch (err: any) {
+          throw new McpError(
+            ErrorCode.InvalidRequest,
+            `Failed to read file ${args.filePath}: ${err.message}`
+          );
+        }
+      } else {
+        // Use provided source (for small files - from context)
+        sourceContent = args.source;
+      }
+
       await this.adtclient.setObjectSource(
         args.objectSourceUrl,
-        args.source,
+        sourceContent,
         args.lockHandle,
         args.transport
       );
@@ -87,7 +139,8 @@ export class ObjectSourceHandlers extends BaseHandler {
             type: 'text',
             text: JSON.stringify({
               status: 'success',
-              updated: true
+              updated: true,
+              sourceLoadedFrom: args.filePath ? `File: ${args.filePath}` : 'Context (direct source)'
             })
           }
         ]
