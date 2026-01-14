@@ -2,7 +2,8 @@ import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { BaseHandler } from './BaseHandler';
 import type { ToolDefinition } from '../types/tools';
 import { performance } from 'perf_hooks';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { dirname } from 'path';
 
 export class ObjectSourceHandlers extends BaseHandler {
   getTools(): ToolDefinition[] {
@@ -17,6 +18,28 @@ export class ObjectSourceHandlers extends BaseHandler {
             options: { type: 'string' }
           },
           required: ['objectSourceUrl']
+        }
+      },
+      {
+        name: 'downloadObjectSource',
+        description: 'Downloads ABAP source code to a local file to avoid context overflow',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            objectSourceUrl: {
+              type: 'string',
+              description: 'The object source URL (e.g., /sap/bc/adt/oo/classes/zcl_example/source/main)'
+            },
+            filePath: {
+              type: 'string',
+              description: 'Local file path to save source to'
+            },
+            options: {
+              type: 'string',
+              description: 'Optional query parameters'
+            }
+          },
+          required: ['objectSourceUrl', 'filePath']
         }
       },
       {
@@ -56,6 +79,8 @@ export class ObjectSourceHandlers extends BaseHandler {
     switch (toolName) {
       case 'getObjectSource':
         return this.handleGetObjectSource(args);
+      case 'downloadObjectSource':
+        return this.handleDownloadObjectSource(args);
       case 'setObjectSource':
         return this.handleSetObjectSource(args);
       default:
@@ -85,6 +110,55 @@ export class ObjectSourceHandlers extends BaseHandler {
       throw new McpError(
         ErrorCode.InternalError,
         `Failed to get object source: ${error.message || 'Unknown error'}`
+      );
+    }
+  }
+
+  async handleDownloadObjectSource(args: any): Promise<any> {
+    const startTime = performance.now();
+    try {
+      // Get source from SAP
+      const source = await this.adtclient.getObjectSource(args.objectSourceUrl, args.options);
+
+      // Ensure directory exists
+      const dir = dirname(args.filePath);
+      try {
+        await mkdir(dir, { recursive: true });
+      } catch (err: any) {
+        // Ignore error if directory already exists
+        if (err.code !== 'EEXIST') {
+          throw err;
+        }
+      }
+
+      // Write to file
+      await writeFile(args.filePath, source, 'utf-8');
+
+      // Calculate stats
+      const lines = source.split('\n').length;
+      const size = Buffer.byteLength(source, 'utf-8');
+
+      this.trackRequest(startTime, true);
+      this.logger.info('Source downloaded to file', { filePath: args.filePath, lines, size });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              status: 'success',
+              savedTo: args.filePath,
+              lines,
+              size
+            })
+          }
+        ]
+      };
+    } catch (error: any) {
+      this.trackRequest(startTime, false);
+      throw new McpError(
+        ErrorCode.InternalError,
+        `Failed to download object source: ${error.message || 'Unknown error'}`
       );
     }
   }

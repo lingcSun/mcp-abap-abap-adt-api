@@ -272,6 +272,7 @@ export class AbapAdtServer extends Server {
                 result = await this.codeAnalysisHandlers.handle(request.params.name, request.params.arguments);
                 break;
             case 'getObjectSource':
+            case 'downloadObjectSource':
             case 'setObjectSource':
                 result = await this.objectSourceHandlers.handle(request.params.name, request.params.arguments);
                 break;
