@@ -2,23 +2,31 @@ import { McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { BaseHandler } from './BaseHandler.js';
 import type { ToolDefinition } from '../types/tools.js';
 import { ADTClient } from 'abap-adt-api';
+import { readFile } from 'fs/promises';
 
 export class CodeAnalysisHandlers extends BaseHandler {
     getTools(): ToolDefinition[] {
         return [
             {
                 name: 'syntaxCheckCode',
-                description: 'Perform ABAP syntax check with source code',
+                description: 'Perform ABAP syntax check with source code. Use filePath for large files to avoid context overflow.',
                 inputSchema: {
                     type: 'object',
                     properties: {
-                        code: { type: 'string' },
+                        code: {
+                            type: 'string',
+                            description: 'Source code content (for small files - will be included in context)'
+                        },
+                        filePath: {
+                            type: 'string',
+                            description: 'Local file path to read source from (for large files - bypasses context)'
+                        },
                         url: { type: 'string', optional: true },
                         mainUrl: { type: 'string', optional: true },
                         mainProgram: { type: 'string', optional: true },
                         version: { type: 'string', optional: true }
                     },
-                    required: ['code']
+                    required: []
                 }
             },
             {
@@ -253,7 +261,41 @@ export class CodeAnalysisHandlers extends BaseHandler {
     async handleSyntaxCheckCode(args: any): Promise<any> {
         const startTime = performance.now();
         try {
-            const result = await this.adtclient.syntaxCheck(args.url, args?.mainUrl, args?.code, args?.mainProgram, args?.version);
+            // Validate that either code or filePath is provided
+            if (!args.code && !args.filePath) {
+                throw new McpError(
+                    ErrorCode.InvalidParams,
+                    'Either code or filePath must be provided'
+                );
+            }
+
+            // Validate that not both are provided
+            if (args.code && args.filePath) {
+                throw new McpError(
+                    ErrorCode.InvalidParams,
+                    'Cannot use both code and filePath. Use one or the other.'
+                );
+            }
+
+            let codeContent: string;
+
+            if (args.filePath) {
+                // Read from file (for large files - bypasses context)
+                try {
+                    codeContent = await readFile(args.filePath, 'utf-8');
+                    this.logger.info('Code loaded from file', { filePath: args.filePath });
+                } catch (err: any) {
+                    throw new McpError(
+                        ErrorCode.InvalidRequest,
+                        `Failed to read file ${args.filePath}: ${err.message}`
+                    );
+                }
+            } else {
+                // Use provided code (for small files - from context)
+                codeContent = args.code;
+            }
+
+            const result = await this.adtclient.syntaxCheck(args.url, args?.mainUrl, codeContent, args?.mainProgram, args?.version);
             this.trackRequest(startTime, true);
             return {
                 content: [
@@ -261,7 +303,8 @@ export class CodeAnalysisHandlers extends BaseHandler {
                         type: 'text',
                         text: JSON.stringify({
                             status: 'success',
-                            result
+                            result,
+                            codeLoadedFrom: args.filePath ? `File: ${args.filePath}` : 'Context (direct code)'
                         })
                     }
                 ]
