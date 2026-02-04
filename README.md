@@ -13,9 +13,22 @@ The MCP-Server `mcp-abap-abap-adt-api` is a Model Context Protocol (MCP) server 
 - **Authentication**: Securely authenticate with ABAP systems using the `login` tool.
 - **Object Management**: Create, read, update, and delete ABAP objects seamlessly.
 - **Transport Handling**: Manage transport requests with tools like `createTransport` and `transportInfo`.
-- **Code Analysis**: Perform syntax checks and retrieve code completion suggestions.
+- **Code Analysis**: Perform syntax checks, find definitions, and retrieve usage references.
 - **Extensibility**: Easily extend the server with additional tools and resources as needed.
 - **Session Management**: Handle session caching and termination using `dropSession` and `logout`.
+
+### Disabled Handlers
+
+The following handlers are commented out as they are not typically useful for MCP server operations:
+
+- **GitHandlers** - Git repository management (use your local Git instead)
+- **DebugHandlers** - Full debugger integration (better suited for IDEs like Eclipse ADT)
+- **AtcHandlers** - ABAP Test Cockpit operations (quality checks better done in SAP GUI)
+- **TraceHandlers** - Performance tracing (better suited for dedicated monitoring tools)
+- **DiscoveryHandlers** - ADT discovery/metadata (mainly for IDE feature detection)
+- **CodeCompletion** - Code completion tools (not practical for LLM-based assistance)
+
+These can be re-enabled by uncommenting the relevant code in `src/index.ts` if needed.
 
 ## Installation
 

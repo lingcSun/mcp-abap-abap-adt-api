@@ -40,20 +40,21 @@ export class CodeAnalysisHandlers extends BaseHandler {
                     required: ['cdsUrl']
                 }
             },
-            {
-                name: 'codeCompletion',
-                description: 'Get code completion suggestions',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        sourceUrl: { type: 'string' },
-                        source: { type: 'string' },
-                        line: { type: 'number' },
-                        column: { type: 'number' }
-                    },
-                    required: ['sourceUrl', 'source', 'line', 'column']
-                }
-            },
+            // Code completion tools (commented out - not useful for MCP server)
+            // {
+            //     name: 'codeCompletion',
+            //     description: 'Get code completion suggestions',
+            //     inputSchema: {
+            //         type: 'object',
+            //         properties: {
+            //             sourceUrl: { type: 'string' },
+            //             source: { type: 'string' },
+            //             line: { type: 'number' },
+            //             column: { type: 'number' }
+            //         },
+            //         required: ['sourceUrl', 'source', 'line', 'column']
+            //     }
+            // },
             {
                 name: 'findDefinition',
                 description: 'Find symbol definition',
@@ -92,21 +93,21 @@ export class CodeAnalysisHandlers extends BaseHandler {
                     properties: {}
                 }
             },
-            {
-                name: 'codeCompletionFull',
-                description: 'Performs full code completion.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        sourceUrl: { type: 'string' },
-                        source: { type: 'string' },
-                        line: { type: 'number' },
-                        column: { type: 'number' },
-                        patternKey: { type: 'string' }
-                    },
-                    required: ['sourceUrl', 'source', 'line', 'column', 'patternKey']
-                }
-            },
+            // {
+            //     name: 'codeCompletionFull',
+            //     description: 'Performs full code completion.',
+            //     inputSchema: {
+            //         type: 'object',
+            //         properties: {
+            //             sourceUrl: { type: 'string' },
+            //             source: { type: 'string' },
+            //             line: { type: 'number' },
+            //             column: { type: 'number' },
+            //             patternKey: { type: 'string' }
+            //         },
+            //         required: ['sourceUrl', 'source', 'line', 'column', 'patternKey']
+            //     }
+            // },
             {
                 name: 'runClass',
                 description: 'Runs a class.',
@@ -118,20 +119,20 @@ export class CodeAnalysisHandlers extends BaseHandler {
                     required: ['className']
                 }
             },
-            {
-                name: 'codeCompletionElement',
-                description: 'Retrieves code completion element information.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        sourceUrl: { type: 'string' },
-                        source: { type: 'string' },
-                        line: { type: 'number' },
-                        column: { type: 'number' }
-                    },
-                    required: ['sourceUrl', 'source', 'line', 'column']
-                }
-            },
+            // {
+            //     name: 'codeCompletionElement',
+            //     description: 'Retrieves code completion element information.',
+            //     inputSchema: {
+            //         type: 'object',
+            //         properties: {
+            //             sourceUrl: { type: 'string' },
+            //             source: { type: 'string' },
+            //             line: { type: 'number' },
+            //             column: { type: 'number' }
+            //         },
+            //         required: ['sourceUrl', 'source', 'line', 'column']
+            //     }
+            // },
             {
                 name: 'usageReferenceSnippets',
                 description: 'Retrieves usage reference snippets.',
@@ -206,20 +207,20 @@ export class CodeAnalysisHandlers extends BaseHandler {
                 return this.handleSyntaxCheckCode(args);
             case 'syntaxCheckCdsUrl':
                 return this.handleSyntaxCheckCdsUrl(args);
-            case 'codeCompletion':
-                return this.handleCodeCompletion(args);
+            // case 'codeCompletion':
+            //     return this.handleCodeCompletion(args);
             case 'findDefinition':
                 return this.handleFindDefinition(args);
             case 'usageReferences':
                 return this.handleUsageReferences(args);
             case 'syntaxCheckTypes':
                 return this.handleSyntaxCheckTypes(args);
-            case 'codeCompletionFull':
-                return this.handleCodeCompletionFull(args);
+            // case 'codeCompletionFull':
+            //     return this.handleCodeCompletionFull(args);
             case 'runClass':
                 return this.handleRunClass(args);
-            case 'codeCompletionElement':
-                return this.handleCodeCompletionElement(args);
+            // case 'codeCompletionElement':
+            //     return this.handleCodeCompletionElement(args);
             case 'usageReferenceSnippets':
                 return this.handleUsageReferenceSnippets(args);
             case 'fixProposals':
