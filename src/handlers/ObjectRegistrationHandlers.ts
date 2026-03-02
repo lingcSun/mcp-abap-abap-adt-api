@@ -82,7 +82,10 @@ export class ObjectRegistrationHandlers extends BaseHandler {
             description: { type: 'string' },
             parentPath: { type: 'string' },
             responsible: { type: 'string', optional: true },
-            transport: { type: 'string', optional: true }
+            transport: { type: 'string', optional: true },
+            language: { type: 'string', optional: true, description: 'Language code (e.g., ZH for Chinese)' },
+            masterLanguage: { type: 'string', optional: true, description: 'Master language code' },
+            masterSystem: { type: 'string', optional: true, description: 'Master system ID' }
           },
           required: ['objtype', 'name', 'parentName', 'description', 'parentPath']
         }
@@ -149,18 +152,23 @@ export class ObjectRegistrationHandlers extends BaseHandler {
     }
   }
 
-  async handleCreateObject(args: any): Promise<any> {    
+  async handleCreateObject(args: any): Promise<any> {
     const startTime = performance.now();
     try {
-      const result = await this.adtclient.createObject(
-        args.objtype,
-        args.name,
-        args.parentName,
-        args.description,
-        args.parentPath,
-        args.responsible,
-        args.transport
-      );
+      // Build options object with all parameters including language settings
+      const options = {
+        objtype: args.objtype,
+        name: args.name,
+        parentName: args.parentName,
+        description: args.description,
+        parentPath: args.parentPath,
+        responsible: args.responsible,
+        transport: args.transport,
+        language: args.language,
+        masterLanguage: args.masterLanguage,
+        masterSystem: args.masterSystem
+      };
+      const result = await this.adtclient.createObject(options);
       this.trackRequest(startTime, true);
       return {
         content: [{
