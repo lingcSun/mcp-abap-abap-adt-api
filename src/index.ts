@@ -336,6 +336,8 @@ export class AbapAdtServer extends Server {
             case 'ddicElement':
             case 'ddicRepositoryAccess':
             case 'packageSearchHelp':
+            case 'setDomainProperties':
+            case 'setDataElementProperties':
                 result = await this.ddicHandlers.handle(request.params.name, request.params.arguments);
                 break;
             case 'publishServiceBinding':
