@@ -14,6 +14,7 @@ The MCP-Server `mcp-abap-abap-adt-api` is a Model Context Protocol (MCP) server 
 - **Object Management**: Create, read, update, and delete ABAP objects seamlessly.
 - **Transport Handling**: Manage transport requests with tools like `createTransport` and `transportInfo`.
 - **Code Analysis**: Perform syntax checks, find definitions, and retrieve usage references.
+- **DDIC Operations**: Create and configure DDIC objects (domains, data elements) with multi-language support.
 - **Extensibility**: Easily extend the server with additional tools and resources as needed.
 - **Session Management**: Handle session caching and termination using `dropSession` and `logout`.
 
@@ -31,14 +32,6 @@ The following handlers are commented out as they are not typically useful for MC
 These can be re-enabled by uncommenting the relevant code in `src/index.ts` if needed.
 
 ## Installation
-
-### Installing via Smithery
-
-To install ABAP-ADT-API MCP-Server for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@mario-andreschak/mcp-abap-abap-adt-api):
-
-```bash
-npx -y @smithery/cli install @mario-andreschak/mcp-abap-abap-adt-api --client claude
-```
 
 ### Prerequisites
 
@@ -101,7 +94,11 @@ npx -y @smithery/cli install @mario-andreschak/mcp-abap-abap-adt-api --client cl
    npm run start
    ```
 
-   (or alternatively integrate the MCP Server into VSCode)
+   For debugging with MCP Inspector:
+
+   ```cmd
+   npm run dev
+   ```
 
 ## Usage
 
@@ -161,8 +158,41 @@ This server provides tools for interacting with an SAP system via ADT (ABAP Deve
 *   **`activate`:** Activates an ABAP object. (See notes below on activation/unlocking.)
     *    `object`: The object to be activated.
 
+*   **`createObject`:** Creates a new ABAP object (supports multi-language parameters).
+    *   `objtype`: (string, required) Object type (e.g., `PROG/P` for program, `CLAS/OC` for class)
+    *   `name`: (string, required) Object name
+    *   `parentName`: (string, required) Parent name (e.g., package name)
+    *   `description`: (string, required) Object description
+    *   `parentPath`: (string, required) Parent path
+    *   `responsible`: (string, optional) Responsible user
+    *   `transport`: (string, optional) Transport request number
+    *   `language`: (string, optional) Language code (e.g., `ZH` for Chinese)
+    *   `masterLanguage`: (string, optional) Master language code
+    *   `masterSystem`: (string, optional) Master system ID
+
+*   **`validateNewObject`:** Validates parameters for creating a new ABAP object.
+    *   `objtype`: (string, required) Object type (e.g., `PROG/P`, `CLAS/OC`, `DEVC/K`)
+    *   `objname`: (string, required) Object name
+    *   `description`: (string, required) Object description
+    *   `packagename`: (string, optional) Package name (for most object types)
+    *   Additional parameters available for specific object types (see tool description)
+
 *   **`getObjectSource`:** Retrieves the source code of an ABAP object.
     *   `objectSourceUrl`: (string, required) The object's URI *with the suffix `/source/main`*.
+
+*   **`setDomainProperties`:** Sets properties for a DDIC domain after creating it.
+    *   `domainUrl`: (string, required) Domain object URL (e.g., `/sap/bc/adt/ddic/domains/zdomain_name`)
+    *   `properties`: (object, required) Domain properties including `typeInformation` (datatype, length, decimals) and `outputInformation` (length, signExists, lowercase, ampmFormat)
+    *   `metaData`: (object, required) Domain metadata (name, description, language, masterLanguage, masterSystem, responsible, packageName)
+    *   `lockHandle`: (string, required) Lock handle from lock operation
+    *   `transport`: (string, optional) Transport request number
+
+*   **`setDataElementProperties`:** Sets properties for a DDIC data element after creating it.
+    *   `dataElementUrl`: (string, required) Data element object URL (e.g., `/sap/bc/adt/ddic/dataelements/zdata_element`)
+    *   `properties`: (object, required) Data element properties including `typeKind`, `typeName`, `dataType`, `dataTypeLength`, and `fieldLabels` (short, medium, long, heading labels with lengths)
+    *   `metaData`: (object, required) Data element metadata (name, description, language, masterLanguage, masterSystem, responsible, packageName)
+    *   `lockHandle`: (string, required) Lock handle from lock operation
+    *   `transport`: (string, optional) Transport request number
 
 **Workflow for Modifying ABAP Code:**
 
@@ -177,13 +207,25 @@ This server provides tools for interacting with an SAP system via ADT (ABAP Deve
 9.  **unLock the object:** Use `unLock`.
 
 **Important Notes:**
-*   **File Handling:** SAP is completly de-coupled from the local file system. Reading source code will only return the code as tool result - it has no effect on file. Files are not synchronized with SAP but merely a local copy for our reference. FYI: It's not strictly necessary for you to create local copies of source codes, as they have no effect on SAP, but it helps us track changes. 
+*   **File Handling:** SAP is completly de-coupled from the local file system. Reading source code will only return the code as tool result - it has no effect on file. Files are not synchronized with SAP but merely a local copy for our reference. FYI: It's not strictly necessary for you to create local copies of source codes, as they have no effect on SAP, but it helps us track changes.
 *   **File Handling:** The local filenames you will use will not contain any paths, but only a filename! It's preferable to use a pattern like "[ObjectName].[ObjectType].abap". (e.g., SAPMV45A.prog.abap for a ABAP Program SAPMV45A, CL_IXML.clas.abap for a Class CL_IXML)
 *   **URL Suffix:**  Remember to add `/source/main` to the object URI when using `setObjectSource` and `getObjectSource`.
 *   **Transport Request:** Obtain the transport request number (e.g., from `transportInfo` or from the user) and include it in relevant operations.
 *   **Lock Handle:**  The `lockHandle` obtained from the `lock` operation is crucial for `setObjectSource` and `unLock`. Ensure you are using a valid `lockHandle`. If a lock fails, you may need to re-acquire the lock. Locks can expire or be released by other users.
 *   **Activation/Unlocking Order:** The exact order of `activate` and `unLock` operations might need clarification. Refer to the tool descriptions or ask the user. It appears `activate` can be used without unlocking first.
 * **Error Handling:** The tools return JSON responses. Check for error messages within these responses.
+
+**Workflow for Creating DDIC Objects (Domains and Data Elements):**
+
+1.  **Validate the new object parameters:** Use `validateNewObject` with `objtype: "DDIC/Doma"` for domains or `objtype: "DDIC/DTEL"` for data elements.
+2.  **Create the object:** Use `createObject` with appropriate parameters (including optional `language`, `masterLanguage`, `masterSystem` for multi-language support).
+3.  **Get transport information:** Use `transportInfo`.
+4.  **Lock the object:** Use `lock` on the object URL.
+5.  **Set properties:**
+    - For domains: Use `setDomainProperties` with `typeInformation` (datatype, length, decimals) and `outputInformation` (format settings).
+    - For data elements: Use `setDataElementProperties` with `typeKind`, `typeName`, `dataType`, `fieldLabels`, etc.
+6.  **Activate the object:** Use `activateByName` or `activateObjects`.
+7.  **Unlock the object:** Use `unLock`.
 
 ## Efficient Database Access
 
