@@ -43,7 +43,7 @@ These can be re-enabled by uncommenting the relevant code in `src/index.ts` if n
 1. **Clone the Repository**
 
    ```cmd
-   git clone https://github.com/mario-andreschak/mcp-abap-abap-adt-api.git
+   git clone https://github.com/lingcSun/mcp-abap-abap-adt-api.git
    cd mcp-abap-abap-adt-api
    ```
 
