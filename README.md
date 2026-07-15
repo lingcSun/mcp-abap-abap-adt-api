@@ -1,14 +1,31 @@
 DISCLAIMER: This server is still in experimental status! Use it with caution!
 
-# ABAP-ADT-API MCP-Server
+# @lingc-sun/mcp-abap-adt
+
+> Fork of [`mcp-abap-abap-adt-api`](https://github.com/mario-andreschak/mcp-abap-abap-adt-api) with **DDIC object tools**, **large-file `filePath` support**, and **multi-language object creation**.
 
 ## Description
 
-The MCP-Server `mcp-abap-abap-adt-api` is a Model Context Protocol (MCP) server designed to facilitate seamless communication between ABAP systems and MCP clients. It is a wrapper for [abap-adt-api](https://github.com/marcellourbani/abap-adt-api/) and provides a suite of tools and resources for managing ABAP objects, handling transport requests, performing code analysis, and more, enhancing the efficiency and effectiveness of ABAP development workflows.
+The MCP-Server `@lingc-sun/mcp-abap-adt` is a Model Context Protocol (MCP) server designed to facilitate seamless communication between ABAP systems and MCP clients. It is a wrapper for [abap-adt-api](https://github.com/marcellourbani/abap-adt-api/) and provides a suite of tools and resources for managing ABAP objects, handling transport requests, performing code analysis, DDIC operations, and more, enhancing the efficiency and effectiveness of ABAP development workflows.
 
-The server is published on npm as [`mcp-abap-abap-adt-api`](https://www.npmjs.com/package/mcp-abap-abap-adt-api) and listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.mario-andreschak/mcp-abap-abap-adt-api`, so most MCP clients can install it with a single command (or a single click — see [FLUJO](#integrating-with-flujo-recommended) below).
+The server is published on npm as [`@lingc-sun/mcp-abap-adt`](https://www.npmjs.com/package/@lingc-sun/mcp-abap-adt).
 
-> **Related project:** For higher-level, read-oriented ABAP tools (`GetProgram`, `GetClass`, `GetTable`, …) see the separate [`mcp-abap-adt`](https://github.com/mario-andreschak/mcp-abap-adt) server. **This** server (`mcp-abap-abap-adt-api`) exposes the lower-level ADT API (lock/unlock, edit source, transports, activation, syntax checks, DDIC access, …) for full read/write development workflows.
+## ✨ Fork Features (vs. upstream)
+
+This fork adds several enhancements over the upstream `mcp-abap-abap-adt-api`:
+
+- **🔤 DDIC Object Tools** — Full domain and data element configuration:
+  - `setDomainProperties` — Set domain data type, length, output format, fixed values, etc.
+  - `setDataElementProperties` — Set data element type reference, field labels, search help, etc.
+  - Enables complete DDIC workflow: create domain → set properties → create data element → set properties.
+- **📁 Large-file `filePath` support** — Avoid LLM context overflow:
+  - `downloadObjectSource` — Save ABAP source to a local file.
+  - `setObjectSource` / `syntaxCheckCode` accept `filePath` to read/write source from disk instead of passing it through the model context.
+- **🌐 Multi-language object creation** — `createObject` supports `language` / `masterLanguage` parameters.
+- **🔇 Streamlined handlers** — Commented out handlers not useful for MCP (Git, Debug, ATC, Trace, Discovery, CodeCompletion). Re-enable in `src/index.ts` if needed.
+- **🧠 Source caching** — `syntaxCheckCode` reuses the source last read/written for a URL (merged from upstream).
+
+> See also the upstream project for the original implementation: [`mario-andreschak/mcp-abap-abap-adt-api`](https://github.com/mario-andreschak/mcp-abap-abap-adt-api).
 
 ## Features
 
@@ -40,46 +57,18 @@ These can be re-enabled by uncommenting the relevant code in `src/index.ts` if n
 
 ## Installation
 
-There are three ways to use this server, from easiest to most manual:
+There are two ways to use this server, from easiest to most manual:
 
-### Integrating with FLUJO (recommended)
+### Quick start with npx (any MCP client) — recommended
 
-[FLUJO](https://github.com/mario-andreschak/FLUJO) is the easiest way to use this server — no cloning, building, or hand-editing JSON config:
-
-1. In FLUJO, navigate to **MCP**.
-2. Click **Add Server**.
-3. On the **Marketplace** tab, search for **`mcp-abap-abap-adt-api`** and select it.
-4. FLUJO fetches the npm package automatically and opens the **Local Server** tab. Enter your SAP **URL**, **User**, **Password** (and optionally client/language), then click **Save**.
-
-That's it — FLUJO downloads and runs the npm package for you and keeps your SAP credentials with the installed server.
-
-#### Streamable HTTP transport (via FLUJO)
-
-`mcp-abap-abap-adt-api` runs over **stdio**. If you need to reach it over **streamable HTTP** — for example from another app on your machine or a client that only speaks HTTP — let FLUJO re-host it: install the server in FLUJO as above, then toggle **"Expose to external apps"** on the server. FLUJO's built-in mcp-proxy then serves it over HTTP at `http://localhost:4200/mcp-proxy/mcp-abap-abap-adt-api`, and any HTTP-capable MCP client can connect with a config like:
+The server is published on npm as `@lingc-sun/mcp-abap-adt`, so most MCP clients (Claude Desktop, Claude Code, Cline, etc.) can launch it directly via `npx` — no cloning or building required. Add it to your MCP client configuration:
 
 ```json
 {
   "mcpServers": {
-    "mcp-abap-abap-adt-api": {
-      "type": "http",
-      "url": "http://localhost:4200/mcp-proxy/mcp-abap-abap-adt-api"
-    }
-  }
-}
-```
-
-FLUJO keeps your SAP credentials with the installed server, so the HTTP config itself carries none.
-
-### Quick start with npx (any MCP client)
-
-The server is published on npm, so you don't need to clone or build anything — most MCP clients can launch it directly via `npx`. Add it to your MCP client configuration (e.g. Cline, Claude Desktop, Claude Code):
-
-```json
-{
-  "mcpServers": {
-    "mcp-abap-abap-adt-api": {
+    "mcp-abap-adt": {
       "command": "npx",
-      "args": ["-y", "mcp-abap-abap-adt-api"],
+      "args": ["-y", "@lingc-sun/mcp-abap-adt"],
       "env": {
         "SAP_URL": "https://your-sap-server.com:44300",
         "SAP_USER": "YOUR_SAP_USERNAME",
@@ -160,23 +149,23 @@ If your SAP system uses a self-signed certificate, add `"NODE_TLS_REJECT_UNAUTHO
 
    When integrating a source build into an MCP client, point `command` at `node` with an absolute path to the build output:
 
-   ```json
-   {
-     "mcpServers": {
-       "mcp-abap-abap-adt-api": {
-         "command": "node",
-         "args": ["PATH_TO_YOUR/mcp-abap-abap-adt-api/dist/index.js"],
-         "disabled": false,
-         "autoApprove": []
-       }
-     }
-   }
-   ```
+```json
+{
+  "mcpServers": {
+    "mcp-abap-adt": {
+      "command": "node",
+      "args": ["PATH_TO_YOUR/mcp-abap-abap-adt-api/dist/index.js"],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
 
 ## Custom Instruction
 Use this Custom Instruction to explain the tool to your model:
 ```
-## mcp-abap-abap-adt-api Server
+## mcp-abap-adt Server
 
 This server provides tools for interacting with an SAP system via ADT (ABAP Development Tools) APIs. It allows you to retrieve information about ABAP objects, modify source code, and manage transports.
 
